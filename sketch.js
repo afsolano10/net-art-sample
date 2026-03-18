@@ -35,6 +35,29 @@ function draw() {
   stroke(255);
   strokeWeight(2);
   line(pmouseX, pmouseY, mouseX, mouseY);
+
+  // --- TERMINAL EFFECT ---
+  
+  // Add a new log every 4 frames (so it doesn't move too fast to read)
+  if (frameCount % 4 === 0) {
+    terminalLogs.push(generateFakeLog()); // Add new line to the end
+    
+    // If we have more lines than fit on screen, remove the oldest one (the first one)
+    if (terminalLogs.length > maxLogs) {
+      terminalLogs.shift(); 
+    }
+  }
+
+  // Draw the text
+  textAlign(LEFT, TOP);
+  fill(0, 255, 0, 200); // Classic hacker green, slightly transparent
+  noStroke(); // Make sure the text doesn't have outlines
+  
+  // Loop through our list and draw each line slightly lower than the last
+  for (let i = 0; i < terminalLogs.length; i++) {
+    // text(string, x, y)
+    text(terminalLogs[i], 20, 20 + (i * 18)); 
+  }
 }
 
 function windowResized() {
@@ -44,4 +67,25 @@ function windowResized() {
   } else {
     background(255);
   }
+}
+
+function generateFakeLog() {
+  // A mix of technical-sounding actions
+  const actions = [
+    "SFTP_CONNECT_INIT", 
+    "GPG_DECRYPT_PAYLOAD", 
+    "SNOWFLAKE_QUERY_EXEC", 
+    "AWAITING_XLSX_PARSE", 
+    "DATA_OVERRIDE_AUTH", 
+    "MEM_ALLOC_ROOT"
+  ];
+  
+  // Generate a random 6-character hex code (like 0A4F9B)
+  let hexCode = hex(floor(random(0, 16777215)), 6); 
+  let action = random(actions);
+  
+  // 10% chance it says ERR instead of OK to look glitchy
+  let status = random(100) < 10 ? 'ERROR_FATAL' : 'OK'; 
+  
+  return `[${hexCode}] ${action} ... ${status}`;
 }
