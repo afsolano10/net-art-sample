@@ -1,0 +1,55 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; 
+  background-color: #141414; /* Your dark gallery background */
+}
+
+canvas {
+  display: block; 
+}
+
+/* --- THE INTRO SCREEN --- */
+#intro-screen {
+  position: absolute; /* Takes it out of normal flow */
+  top: 0;
+  left: 0;
+  width: 100vw; /* 100% of the Viewport Width */
+  height: 100vh; /* 100% of the Viewport Height */
+  background-color: white; 
+  z-index: 10; /* Forces it to sit ON TOP of the p5 canvas */
+  
+  /* Flexbox is the magic tool for perfect centering */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  
+  /* This makes the fade-out look smooth later */
+  transition: opacity 0.5s ease; 
+}
+
+/* Style the button */
+#enter-btn {
+  padding: 15px 30px;
+  font-size: 24px;
+  background-color: white;
+  border: 2px solid black;
+  cursor: pointer;
+  font-family: monospace; /* Gives it a slightly edgy, typewriter look */
+  transition: background-color 0.2s;
+}
+
+#enter-btn:hover {
+  background-color: #f0f0f0; /* Slight gray when hovered */
+}
+
+/* Style the warning text */
+#warning-text {
+  margin-top: 15px;
+  color: red; 
+  font-family: sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
