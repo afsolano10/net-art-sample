@@ -1,5 +1,6 @@
 let started = false;
-
+let terminalLogs = []; // Array to store the terminal logs
+let maxLogs = 40; // The maximum number of log lines to show on screen
 function setup() {
   createCanvas(windowWidth, windowHeight);
   background(255);
@@ -39,7 +40,7 @@ function draw() {
   // --- TERMINAL EFFECT ---
   
   // Add a new log every 4 frames (so it doesn't move too fast to read)
-  if (frameCount % 4 === 0) {
+  if (frameCount % 10 === 0) {
     terminalLogs.push(generateFakeLog()); // Add new line to the end
     
     // If we have more lines than fit on screen, remove the oldest one (the first one)
