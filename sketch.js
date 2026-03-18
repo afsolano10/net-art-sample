@@ -3,7 +3,7 @@ let terminalLogs = []; // Array to store the terminal logs
 let maxLogs = 40; // The maximum number of log lines to show on screen
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  background(255);
+  background(0);
   
   // Pause the draw loop until the button is clicked
   noLoop(); 
@@ -11,6 +11,7 @@ function setup() {
   // Link the HTML button and screen
   let enterButton = document.getElementById('enter-btn');
   let introScreen = document.getElementById('intro-screen');
+  let exitButton = document.getElementById('exit-btn');
   
   enterButton.addEventListener('click', function() {
     // Fade out the intro screen
@@ -18,11 +19,26 @@ function setup() {
     setTimeout(() => {
       introScreen.style.display = 'none';
       background(0);
+      exitButton.style.display = 'block'; // Show the exit button when sketch starts
     }, 500);
     
     // Start the art
     started = true;
     loop(); // Unpause the p5.js loop
+  });
+  
+  // Set up the Exit Button logic
+  exitButton.addEventListener('click', function() {
+    started = false;
+    noLoop(); // Halt p5 sketch
+    exitButton.style.display = 'none';
+    background(0); // clear the screen of trails
+    
+    // Bring the intro screen back
+    introScreen.style.display = 'flex';
+    setTimeout(() => {
+      introScreen.style.opacity = '1';
+    }, 50);
   });
 }
 
@@ -30,7 +46,7 @@ function draw() {
   if (!started) return; 
   
   // A slightly transparent background creates the trailing fade effect
-  background(0, 40);
+  background(0, 90);
   
   // Trace the cursor movement
   stroke(255);
@@ -63,11 +79,7 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  if (started) {
-    background(0);
-  } else {
-    background(255);
-  }
+  background(0);
 }
 
 function generateFakeLog() {
