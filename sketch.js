@@ -2,7 +2,7 @@ let started = false;
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  background(20, 20, 20);
+  background(255);
   
   // Pause the draw loop until the button is clicked
   noLoop(); 
@@ -16,7 +16,7 @@ function setup() {
     introScreen.style.opacity = '0';
     setTimeout(() => {
       introScreen.style.display = 'none';
-      background(20, 20, 20);
+      background(0);
     }, 500);
     
     // Start the art
@@ -28,6 +28,9 @@ function setup() {
 function draw() {
   if (!started) return; 
   
+  // A slightly transparent background creates the trailing fade effect
+  background(0, 40);
+  
   // Trace the cursor movement
   stroke(255);
   strokeWeight(2);
@@ -36,5 +39,9 @@ function draw() {
 
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
-  background(20, 20, 20);
+  if (started) {
+    background(0);
+  } else {
+    background(255);
+  }
 }
