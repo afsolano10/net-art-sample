@@ -44,12 +44,40 @@ canvas {
   background-color: #f0f0f0; /* Slight gray when hovered */
 }
 
-/* Style the warning text */
+/* Style the warning text and prepare it for animation */
 #warning-text {
   margin-top: 15px;
   color: red; 
   font-family: sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 2px;
   text-transform: uppercase;
+  font-weight: bold;
+  
+  /* This calls the animation we build below */
+  animation: text-glitch 0.3s infinite alternate; 
+}
+
+/* --- THE GLITCH ANIMATION KEYFRAMES --- */
+@keyframes text-glitch {
+  0% {
+    transform: translate(0, 0);
+    text-shadow: 2px 0px 0px cyan, -2px 0px 0px red;
+  }
+  25% {
+    transform: translate(-2px, 1px);
+    text-shadow: -2px 0px 0px cyan, 2px 0px 0px red;
+  }
+  50% {
+    transform: translate(2px, -1px);
+    text-shadow: 2px 0px 0px cyan, -2px 0px 0px red;
+  }
+  75% {
+    transform: translate(-1px, 2px);
+    text-shadow: -2px 0px 0px cyan, 2px 0px 0px red;
+  }
+  100% {
+    transform: translate(1px, -2px);
+    text-shadow: 2px 0px 0px cyan, -2px 0px 0px red;
+  }
 }
