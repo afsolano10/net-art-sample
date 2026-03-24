@@ -36,7 +36,7 @@ canvas {
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 15px;
-  animation: text-glitch 6s infinite;
+  animation: text-glitch 3s infinite;
 }
 
 /* Style the button */
@@ -51,7 +51,7 @@ canvas {
   transition: background-color 0.2s;
   
   /* Apply the same glitch animation */
-  animation: text-glitch 3s infinite;
+  animation: text-glitch 1.5s infinite;
 }
 
 #enter-btn:hover {
@@ -92,7 +92,7 @@ canvas {
   text-align: center;
   
   /* The entire animation loops every 3 seconds */
-  animation: text-glitch 2s infinite; 
+  animation: text-glitch 1s infinite; 
 }
 
 /* --- THE GLITCH ANIMATION KEYFRAMES --- */

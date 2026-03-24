@@ -6,6 +6,10 @@ let elapsedTime = 0;
 
 let tranquility = 50; // 0 (Crazy) to 100 (Calm)
 let maxTimerMs = 180000; // 3 minutes constraint for errors and craziness
+let chaosStartMs = 20000; // 20s variable for chaos start
+let chaos = 0; // chaos parameter from 0 to 1
+let globalAccentColor; // global primary color for accent lines
+let globalDarkAccentColor; // global secondary dark color for accent lines
 let linesLayer;
 let walkers = [];
 let visualSegments = [];
@@ -72,16 +76,26 @@ function draw() {
     
     // Draw completed segments
     for (let s of visualSegments) {
-      linesLayer.stroke(s.color);
+      let col;
+      if (s.accentType === 1) col = globalAccentColor;
+      else if (s.accentType === 2) col = globalDarkAccentColor;
+      else col = s.baseColor;
+      
+      linesLayer.stroke(col);
       linesLayer.strokeWeight(s.weight);
       linesLayer.line(s.x1, s.y1, s.x2, s.y2);
     }
     
     // Draw nodes
     for (let n of visualNodes) {
-      linesLayer.stroke(n.color);
+      let col;
+      if (n.accentType === 1) col = globalAccentColor;
+      else if (n.accentType === 2) col = globalDarkAccentColor;
+      else col = n.baseColor;
+      
+      linesLayer.stroke(col);
       linesLayer.strokeWeight(1.5);
-      if (n.filled) linesLayer.fill(n.color);
+      if (n.filled) linesLayer.fill(col);
       else linesLayer.fill(0);
       linesLayer.circle(n.x, n.y, n.size);
     }
@@ -100,6 +114,22 @@ function draw() {
     image(linesLayer, 0, 0);
 
     elapsedTime = millis() - startTime;
+    
+    if (elapsedTime > chaosStartMs) {
+      chaos = map(elapsedTime, chaosStartMs, maxTimerMs, 0, 1);
+      chaos = constrain(chaos, 0, 1);
+    } else {
+      chaos = 0;
+    }
+    
+    // Define global accent color based on chaos threshold
+    if (chaos < 0.5) {
+      globalAccentColor = color(0, 255, 0); // Green phase
+      globalDarkAccentColor = color(0, 100, 0); // Dark green
+    } else {
+      globalAccentColor = color(255, 0, 0); // Red phase
+      globalDarkAccentColor = color(150, 0, 0); // Dark red
+    }
     
     // Trace the cursor movement
     stroke(255);
@@ -171,12 +201,7 @@ function generateFakeLog() {
   let hexCode = hex(floor(random(0, 16777215)), 6); 
   let action = random(actions);
   
-  let chance = 0;
-  if (elapsedTime >= 20000) {
-    // Increase error chance from 10% to 100% over the max timer
-    chance = map(elapsedTime, 0, maxTimerMs, 10, 100);
-    chance = constrain(chance, 10, 100);
-  }
+  let chance = chaos * 100;
   let status = random(100) < chance ? 'ERROR_FATAL' : 'OK'; 
   
   return `[${hexCode}] ${action} ... ${status}`;
@@ -204,6 +229,7 @@ class Walker {
     // Random sizes for the circle at joints
     this.nodeSize = this.weight * 2 + random(1, 3);
     this.isDead = false;
+    this.lastDir = "UP";
   }
   
   update() {
@@ -214,7 +240,7 @@ class Walker {
       let filled = random() <= 0.5;
       visualNodes.push({
         x: this.x, y: this.y, 
-        size: this.nodeSize, color: this.color, filled: filled
+        size: this.nodeSize, accentType: this.accentType, baseColor: this.baseColor, filled: filled
       });
       if (visualNodes.length > 200) visualNodes.shift();
       
@@ -228,7 +254,10 @@ class Walker {
       
       let nextX = this.x, nextY = this.y;
       
-      if (distToTarget <= this.speed) {
+      // Speed scales up to 5x based on the global chaos parameter
+      let currentSpeed = this.speed * map(chaos, 0, 1, 1, 5);
+      
+      if (distToTarget <= currentSpeed) {
         nextX = this.targetX;
         nextY = this.targetY;
         this.hasReached = true;
@@ -237,17 +266,22 @@ class Walker {
         visualSegments.push({
           x1: this.startX, y1: this.startY,
           x2: nextX, y2: nextY,
-          color: this.color, weight: this.weight
+          accentType: this.accentType, baseColor: this.baseColor, weight: this.weight
         });
         if (visualSegments.length > 200) visualSegments.shift();
       } else {
-        let ratio = this.speed / distToTarget;
+        let ratio = currentSpeed / distToTarget;
         nextX += dx * ratio;
         nextY += dy * ratio;
       }
       
       // Draw the actively growing line directly to linesLayer
-      linesLayer.stroke(this.color);
+      let col;
+      if (this.accentType === 1) col = globalAccentColor;
+      else if (this.accentType === 2) col = globalDarkAccentColor;
+      else col = this.baseColor;
+      
+      linesLayer.stroke(col);
       linesLayer.strokeWeight(this.weight);
       linesLayer.line(this.startX, this.startY, nextX, nextY);
       
@@ -272,20 +306,24 @@ class Walker {
     // tranquility ranges from 0 (crazy) to 100 (calm)
     let craziness = map(currentTranquility, 0, 100, 1, 0); 
     
-    // Chance to go UP vs LEFT/RIGHT
-    let upProb = map(craziness, 0, 1, 0.9, 0.33); 
-    
-    let r = random();
-    let dir = "UP";
-    if (r > upProb) {
+    let dir;
+    if (this.lastDir === "UP") {
       dir = random(["LEFT", "RIGHT"]);
+    } else {
+      dir = "UP";
     }
+    
     // Bounce if it goes out of the right side zone
     if (this.x < windowWidth * 0.55 && dir === "LEFT") dir = "RIGHT";
     if (this.x > windowWidth - 50 && dir === "RIGHT") dir = "LEFT";
     
-    let baseLength = map(craziness, 0, 1, 150, 20); // Length of segment
-    let segLength = baseLength + random(-baseLength*0.4, baseLength*0.4);
+    // Lengths are purely random and not affected by chaos
+    let segLength;
+    if (dir === "UP") {
+      segLength = random(50, 150); // Sustains upward stream structure
+    } else {
+      segLength = random(30, 40);  // Quick horizontal cornering
+    }
     
     if (dir === "UP") {
       this.targetX = this.x;
@@ -298,6 +336,8 @@ class Walker {
       this.targetY = this.y;
     }
     
+    this.lastDir = dir;
+    
     // Update the starting location so we can draw the live line
     this.startX = this.x;
     this.startY = this.y;
@@ -306,19 +346,20 @@ class Walker {
   }
   
   pickNewColor() {
-    let chance = 0;
-    if (elapsedTime >= 20000) {
-      chance = map(elapsedTime, 0, maxTimerMs, 10, 100);
-      chance = constrain(chance, 10, 100);
+    let accentChance = 0;
+    if (chaos < 0.35) {
+      accentChance = map(chaos, 0, 0.35, 50, 0); // Green decreasing
+    } else if (chaos > 0.65) {
+      accentChance = map(chaos, 0.65, 1, 0, 90); // Red capped at exactly 90% max
     }
     
-    if (random(100) < chance) {
-      this.color = color(255, 0, 0); // Red
-    } else if (random() > 0.8) {
-      this.color = color(0, 255, 0); // Code Green
+    if (random(100) < accentChance) {
+      this.accentType = random() < 0.5 ? 1 : 2; // 50/50 split between bright and dark accent
     } else {
-      let shade = random([100, 150, 200, 255]);
-      this.color = color(shade);
+      this.accentType = 0; // Gray/white
     }
+    
+    let shade = random([100, 150, 200, 255]);
+    this.baseColor = color(shade);
   }
 }
