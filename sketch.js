@@ -369,7 +369,7 @@ class Walker {
     if (chaos < 0.35) {
       accentChance = map(chaos, 0, 0.25, 50, 0); // Green decreasing
     } else if (chaos > 0.65) {
-      accentChance = map(chaos, 0.5, 1, 0, 90); // Red capped at exactly 90% max
+      accentChance = map(chaos, 0.35, 1, 0, 90); // Red capped at exactly 90% max
     }
     
     if (random(100) < accentChance) {
