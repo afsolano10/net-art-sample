@@ -5,8 +5,8 @@ let startTime = 0;
 let elapsedTime = 0;
 
 let tranquility = 50; // 0 (Crazy) to 100 (Calm)
-let maxTimerMs = 180000; // 3 minutes constraint for errors and craziness
-let chaosStartMs = 20000; // 20s variable for chaos start
+let maxTimerMs = 150000; // 2.5 minutes constraint for errors and craziness
+let chaosStartMs = 10000; // 10s variable for chaos start
 let chaos = 0; // chaos parameter from 0 to 1
 let globalAccentColor; // global primary color for accent lines
 let globalDarkAccentColor; // global secondary dark color for accent lines
@@ -22,9 +22,9 @@ function setup() {
   linesLayer = createGraphics(windowWidth, windowHeight);
   linesLayer.clear();
   
-  // Initialize some walkers on the right half of the screen
+  // Initialize some walkers strictly on the right 30% of the screen early on
   for (let i = 0; i < 15; i++) {
-    let startX = random(windowWidth * 0.5, windowWidth);
+    let startX = random(windowWidth * 0.7, windowWidth);
     walkers.push(new Walker(startX, windowHeight));
   }
   
@@ -42,12 +42,10 @@ function setup() {
     setTimeout(() => {
       introScreen.style.display = 'none';
       background(0);
-      exitButton.style.display = 'block'; // Show the exit button when sketch starts
     }, 500);
     
-    // Start the art
+    // Resume interactive cursor trace
     started = true;
-    startTime = millis();
     // loop(); // Unpause the p5.js loop
   });
   
@@ -70,9 +68,8 @@ function draw() {
   // A slightly transparent background creates the trailing fade effect
   background(0, 90);
   
-  if (started) {
-    // --- PROCEDURAL LINES VISUAL ---
-    linesLayer.clear();
+  // --- PROCEDURAL LINES VISUAL ---
+  linesLayer.clear();
     
     // Draw completed segments
     for (let s of visualSegments) {
@@ -107,19 +104,38 @@ function draw() {
     for (let i = walkers.length - 1; i >= 0; i--) {
       if (walkers[i].isDead) {
         walkers.splice(i, 1);
-        let startX = random(windowWidth * 0.5, windowWidth);
+        let leftSpawn = started ? windowWidth * 0.5 : windowWidth * 0.7;
+        let startX = random(leftSpawn, windowWidth);
         walkers.push(new Walker(startX, windowHeight));
       }
     }
-    image(linesLayer, 0, 0);
-
-    elapsedTime = millis() - startTime;
     
-    if (elapsedTime > chaosStartMs) {
-      chaos = map(elapsedTime, chaosStartMs, maxTimerMs, 0, 1);
-      chaos = constrain(chaos, 0, 1);
-    } else {
+    // Apply 70% transparency before the initial click
+    if (!started) tint(255, 76);
+    else noTint();
+    
+    image(linesLayer, 0, 0);
+    noTint();
+
+    if (!started) {
       chaos = 0;
+      elapsedTime = 0;
+    } else {
+      elapsedTime = millis() - startTime;
+      
+      if (elapsedTime > chaosStartMs) {
+        chaos = map(elapsedTime, chaosStartMs, maxTimerMs, 0, 1);
+        chaos = constrain(chaos, 0, 1);
+      } else {
+        chaos = 0;
+      }
+    }
+    
+    // Show the exit button only when chaos reaches 0.8
+    if (chaos >= 0.8) {
+      document.getElementById('exit-btn').style.display = 'block';
+    } else {
+      document.getElementById('exit-btn').style.display = 'none';
     }
     
     // Define global accent color based on chaos threshold
@@ -132,10 +148,11 @@ function draw() {
     }
     
     // Trace the cursor movement
-    stroke(255);
-    strokeWeight(2);
-    line(pmouseX, pmouseY, mouseX, mouseY);
-  }
+    if (started) {
+      stroke(255);
+      strokeWeight(2);
+      line(pmouseX, pmouseY, mouseX, mouseY);
+    }
 
   // --- TERMINAL EFFECT ---
   
@@ -290,7 +307,8 @@ class Walker {
     }
     
     // If it goes off top or side, kill to spawn a new one later
-    if (this.y < -50 || this.x < windowWidth * 0.4 || this.x > width + 50) {
+    let deathLeftBound = started ? windowWidth * 0.4 : windowWidth * 0.65;
+    if (this.y < -50 || this.x < deathLeftBound || this.x > width + 50) {
       this.isDead = true;
     }
   }
@@ -314,7 +332,8 @@ class Walker {
     }
     
     // Bounce if it goes out of the right side zone
-    if (this.x < windowWidth * 0.55 && dir === "LEFT") dir = "RIGHT";
+    let leftBounceBound = started ? windowWidth * 0.55 : windowWidth * 0.7;
+    if (this.x < leftBounceBound && dir === "LEFT") dir = "RIGHT";
     if (this.x > windowWidth - 50 && dir === "RIGHT") dir = "LEFT";
     
     // Lengths are purely random and not affected by chaos
@@ -348,9 +367,9 @@ class Walker {
   pickNewColor() {
     let accentChance = 0;
     if (chaos < 0.35) {
-      accentChance = map(chaos, 0, 0.35, 50, 0); // Green decreasing
+      accentChance = map(chaos, 0, 0.25, 50, 0); // Green decreasing
     } else if (chaos > 0.65) {
-      accentChance = map(chaos, 0.65, 1, 0, 90); // Red capped at exactly 90% max
+      accentChance = map(chaos, 0.5, 1, 0, 90); // Red capped at exactly 90% max
     }
     
     if (random(100) < accentChance) {
