@@ -6,7 +6,7 @@ let elapsedTime = 0;
 
 let tranquility = 50; // 0 (Crazy) to 100 (Calm)
 let maxTimerMs = 150000; // 2.5 minutes constraint for errors and craziness
-let chaosStartMs = 10000; // 10s variable for chaos start
+let chaosStartMs = 3000; // 10s variable for chaos start
 let chaos = 0; // chaos parameter from 0 to 1
 let globalAccentColor; // global primary color for accent lines
 let globalDarkAccentColor; // global secondary dark color for accent lines
@@ -46,7 +46,7 @@ function setup() {
     
     // Resume interactive cursor trace
     started = true;
-    // loop(); // Unpause the p5.js loop
+    startTime = millis(); // REQUIRED: Resets timer so chaosStartMs delay begins exactly now and scales linearly from 0
   });
   
   // Set up the Exit Button logic
