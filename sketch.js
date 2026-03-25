@@ -1,7 +1,11 @@
 let screamSound;
-let getOutSound;
+let stayOutSound;
+let globalVolume = 0.5; // Variable to control the volume of all audios
 let screamTimer = 0;
-let getOutTimer = 0;
+
+let organicLogDetected = false;
+let organicLogTime = 0;
+let soundVolumeRampMs = 60000; // 1 minute window to ramp volume up
 
 let started = false;
 let exited = false; // State variable for the trapped ending
@@ -26,7 +30,9 @@ let visualNodes = [];
 
 function setup() {
   screamSound = new Audio('assets/scream.mp3');
-  getOutSound = new Audio('assets/get_out.mp3');
+  stayOutSound = new Audio('assets/stay_out.mp3');
+  screamSound.volume = globalVolume;
+  stayOutSound.volume = globalVolume;
   createCanvas(windowWidth, windowHeight);
   background(0);
   
@@ -64,8 +70,11 @@ function setup() {
   
   enterButton.addEventListener('click', function() {
     // strict browser auto-play bypass:
-    screamSound.play().then(() => screamSound.pause()).catch(() => {});
-    getOutSound.play().then(() => getOutSound.pause()).catch(() => {});
+    screamSound.volume = 0;
+    screamSound.play().then(() => {
+      screamSound.pause();
+      screamSound.volume = globalVolume;
+    }).catch(() => {});
     
     // Fade out the intro screen
     introScreen.style.opacity = '0';
@@ -98,6 +107,13 @@ function setup() {
       btn.innerText = 'STAY OUT';
     }
     
+    // Spread the walkers everywhere
+    walkers = [];
+    for (let i = 0; i < 15; i++) {
+      let startX = random(0, windowWidth);
+      walkers.push(new Walker(startX, windowHeight));
+    }
+    
     background(0); // clear the screen of trails
     
     // Bring the outro screen up
@@ -105,6 +121,10 @@ function setup() {
     setTimeout(() => {
       outroScreen.style.opacity = '1';
     }, 50);
+    
+    stayOutSound.volume = globalVolume; // Immediately force full volume if skipped straight to exit
+    stayOutSound.loop = true;
+    stayOutSound.play().catch(() => {});
   }
   
   exitButton.addEventListener('click', triggerOutro);
@@ -179,6 +199,7 @@ function draw() {
       if (walkers[i].isDead) {
         walkers.splice(i, 1);
         let leftSpawn = started ? windowWidth * 0.5 : windowWidth * 0.7;
+        if (exited) leftSpawn = 0; // generate all over screen
         let startX = random(leftSpawn, windowWidth);
         walkers.push(new Walker(startX, windowHeight));
       }
@@ -244,17 +265,21 @@ function draw() {
     let newLog = generateFakeLog();
     terminalLogs.push(newLog); // Add new line to the end
     
-    if (newLog.includes('ORGANIC LIFEFORM')) {
-      getOutTimer = millis() + 500;
-      if (getOutSound.paused) {
-        getOutSound.loop = true;
-        getOutSound.play().catch(() => {});
-      }
-    } else if (newLog.includes('ERROR_FATAL')) {
+    if (newLog.includes('ERROR_FATAL')) {
       screamTimer = millis() + 500;
       if (screamSound.paused) {
         screamSound.loop = true;
         screamSound.play().catch(() => {});
+      }
+    }
+    
+    if (newLog.includes('ORGANIC LIFEFORM')) {
+      if (!organicLogDetected) {
+        organicLogDetected = true;
+        organicLogTime = millis();
+        stayOutSound.volume = 0;
+        stayOutSound.loop = true;
+        stayOutSound.play().catch(() => {});
       }
     }
     
@@ -270,9 +295,15 @@ function draw() {
     screamSound.currentTime = 0;
   }
   
-  if (getOutSound && !getOutSound.paused && millis() > getOutTimer) {
-    getOutSound.pause();
-    getOutSound.currentTime = 0;
+  // Handle gradual volume increase for stayOutSound
+  if (organicLogDetected && !exited && stayOutSound && !stayOutSound.paused) {
+    let fadeTime = millis() - organicLogTime;
+    if (fadeTime < soundVolumeRampMs) {
+      let v = map(fadeTime, 0, soundVolumeRampMs, 0, globalVolume);
+      stayOutSound.volume = constrain(v, 0, globalVolume);
+    } else {
+      stayOutSound.volume = globalVolume;
+    }
   }
 
   // Draw the text
@@ -305,7 +336,10 @@ function windowResized() {
   visualSegments = [];
   visualNodes = [];
   for (let i = 0; i < 15; i++) {
-    let startX = random(windowWidth * 0.5, windowWidth);
+    let leftSpawn = windowWidth * 0.5;
+    if (exited) leftSpawn = 0;
+    else if (!started) leftSpawn = windowWidth * 0.7;
+    let startX = random(leftSpawn, windowWidth);
     walkers.push(new Walker(startX, windowHeight));
   }
   
@@ -429,6 +463,7 @@ class Walker {
     
     // If it goes off top or side, kill to spawn a new one later
     let deathLeftBound = started ? windowWidth * 0.4 : windowWidth * 0.65;
+    if (exited) deathLeftBound = -50;
     if (this.y < -50 || this.x < deathLeftBound || this.x > width + 50) {
       this.isDead = true;
     }
@@ -454,6 +489,7 @@ class Walker {
     
     // Bounce if it goes out of the right side zone
     let leftBounceBound = started ? windowWidth * 0.55 : windowWidth * 0.7;
+    if (exited) leftBounceBound = 0;
     if (this.x < leftBounceBound && dir === "LEFT") dir = "RIGHT";
     if (this.x > windowWidth - 50 && dir === "RIGHT") dir = "LEFT";
     
