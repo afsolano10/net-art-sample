@@ -7,9 +7,11 @@ let startTime = 0;
 let elapsedTime = 0;
 
 let tranquility = 50; // 0 (Crazy) to 100 (Calm)
-let maxTimerMs = 150000; // 2.5 minutes constraint for errors and craziness
+let maxTimerMs = 50000; // 25 seconds constraint for errors and craziness
 let chaosStartMs = 0; // 0s variable for chaos start
 let chaos = 0; // chaos parameter from 0 to 1
+let extraButtonsCount = 50; // Number of extra chaotic exit buttons
+let extraButtonsStart = 0.8; // Chaos threshold when extra buttons start appearing
 let globalAccentColor; // global primary color for accent lines
 let globalDarkAccentColor; // global secondary dark color for accent lines
 let linesLayer;
@@ -49,7 +51,7 @@ function setup() {
   let outroBgText = document.createElement('div');
   outroBgText.id = 'outro-bg-text';
   let repeatedText = "";
-  for (let i = 0; i < 3000; i++) repeatedText += "KEEP OUT ";
+  for (let i = 0; i < 3000; i++) repeatedText += "STAY OUT ";
   outroBgText.innerText = repeatedText;
   outroScreen.prepend(outroBgText);
   
@@ -79,7 +81,12 @@ function setup() {
     // noLoop(); // Halt p5 sketch
     exitButton.style.display = 'none';
     warningSign.style.display = 'none'; // Hide warning
-    for (let btn of extraExitBtns) btn.style.display = 'none';
+    
+    // Convert all spawned buttons to 'STAY OUT' and leave them flashing
+    for (let btn of extraExitBtns) {
+      btn.innerText = 'STAY OUT';
+    }
+    
     background(0); // clear the screen of trails
     
     // Bring the outro screen up
@@ -91,14 +98,15 @@ function setup() {
   
   exitButton.addEventListener('click', triggerOutro);
   
-  // Create 20 extra get out buttons
-  for (let i = 0; i < 20; i++) {
+  // Create extra exit buttons
+  for (let i = 0; i < extraButtonsCount; i++) {
     let btn = document.createElement('button');
     btn.className = 'extra-exit-btn';
-    btn.innerText = 'Get out';
+    btn.innerText = 'GET OUT';
     
-    // Assign a chaos threshold roughly between 0.71 and 0.99
-    let threshold = 0.7 + ((i + 1) * 0.0145);
+    // Assign a chaos threshold perfectly distributed between start and 1.0 inclusive
+    let step = (1.0 - extraButtonsStart) / (extraButtonsCount - 1);
+    let threshold = extraButtonsStart + (i * step);
     btn.dataset.threshold = threshold;
     
     // Random positions avoiding exact edge clipping
@@ -179,7 +187,7 @@ function draw() {
       elapsedTime = millis() - startTime;
       
       if (elapsedTime > chaosStartMs) {
-        chaos = map(elapsedTime, chaosStartMs, maxTimerMs, 0, 1);
+        chaos = map(elapsedTime, chaosStartMs, maxTimerMs, 0.1, 1);
         chaos = constrain(chaos, 0, 1);
       } else {
         chaos = 0;
@@ -193,7 +201,7 @@ function draw() {
       document.getElementById('exit-btn').style.display = 'none';
     }
     
-    // Show extra buttons as chaos increases above 0.7
+    // Show extra buttons as chaos increases above 0.55
     for (let btn of extraExitBtns) {
       if (chaos >= parseFloat(btn.dataset.threshold)) {
         btn.style.display = 'block';
@@ -221,7 +229,7 @@ function draw() {
   // --- TERMINAL EFFECT ---
   
   // Add a new log every 4 frames (so it doesn't move too fast to read)
-  if (frameCount % 10 === 0) {
+  if (frameCount % 15 === 0) {
     terminalLogs.push(generateFakeLog()); // Add new line to the end
     
     // If we have more lines than fit on screen, remove the oldest one (the first one)
@@ -238,7 +246,7 @@ function draw() {
   for (let i = 0; i < terminalLogs.length; i++) {
     if (!started) {
       fill(0, 200); // Black before start or when trapped
-    } else if (terminalLogs[i].includes('ERROR_FATAL')) {
+    } else if (terminalLogs[i].includes('ERROR_FATAL') || terminalLogs[i].includes('ORGANIC LIFEFORM')) {
       fill(255, 0, 0, 200); // Red for error
     } else {
       fill(0, 255, 0, 200); // Classic hacker green, slightly transparent
@@ -283,9 +291,17 @@ function generateFakeLog() {
   let action = random(actions);
   
   let chance = chaos * 100;
-  let status = random(100) < chance ? 'ERROR_FATAL' : 'OK'; 
+  let isError = random(100) < chance;
   
-  return `[${hexCode}] ${action} ... ${status}`;
+  if (isError) {
+    if (chaos >= extraButtonsStart) {
+      return "ORGANIC LIFEFORM DETECTED: GET OUT";
+    } else {
+      return `[${hexCode}] ${action} ... ERROR_FATAL`;
+    }
+  } else {
+    return `[${hexCode}] ${action} ... OK`;
+  }
 }
 
 // --- PROCEDURAL LINES CLASS --- //
