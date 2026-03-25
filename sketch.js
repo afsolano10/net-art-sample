@@ -29,8 +29,8 @@ let visualSegments = [];
 let visualNodes = [];
 
 function setup() {
-  screamSound = new Audio('assets/scream.mp3');
-  stayOutSound = new Audio('assets/stay_out.mp3');
+  screamSound = new Audio('assets/get_out_curated.mp3');
+  stayOutSound = new Audio('assets/stay_out_curated.mp3');
   screamSound.volume = globalVolume;
   stayOutSound.volume = globalVolume;
   createCanvas(windowWidth, windowHeight);
