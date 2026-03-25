@@ -1,12 +1,14 @@
 let started = false;
+let exited = false; // State variable for the trapped ending
 let terminalLogs = []; // Array to store the terminal logs
+let extraExitBtns = []; // Array to store extra buttons
 let maxLogs = 100; // The maximum number of log lines to show on screen
 let startTime = 0;
 let elapsedTime = 0;
 
 let tranquility = 50; // 0 (Crazy) to 100 (Calm)
 let maxTimerMs = 150000; // 2.5 minutes constraint for errors and craziness
-let chaosStartMs = 3000; // 10s variable for chaos start
+let chaosStartMs = 0; // 0s variable for chaos start
 let chaos = 0; // chaos parameter from 0 to 1
 let globalAccentColor; // global primary color for accent lines
 let globalDarkAccentColor; // global secondary dark color for accent lines
@@ -22,6 +24,11 @@ function setup() {
   linesLayer = createGraphics(windowWidth, windowHeight);
   linesLayer.clear();
   
+  // Pre-populate the terminal logs so it begins with 100 lines immediately
+  for (let i = 0; i < maxLogs; i++) {
+    terminalLogs.push(generateFakeLog());
+  }
+  
   // Initialize some walkers strictly on the right 30% of the screen early on
   for (let i = 0; i < 15; i++) {
     let startX = random(windowWidth * 0.7, windowWidth);
@@ -35,6 +42,16 @@ function setup() {
   let enterButton = document.getElementById('enter-btn');
   let introScreen = document.getElementById('intro-screen');
   let exitButton = document.getElementById('exit-btn');
+  let warningSign = document.getElementById('organic-warning');
+  let outroScreen = document.getElementById('outro-screen');
+  
+  // Create overwhelming background text wall for outro
+  let outroBgText = document.createElement('div');
+  outroBgText.id = 'outro-bg-text';
+  let repeatedText = "";
+  for (let i = 0; i < 3000; i++) repeatedText += "KEEP OUT ";
+  outroBgText.innerText = repeatedText;
+  outroScreen.prepend(outroBgText);
   
   enterButton.addEventListener('click', function() {
     // Fade out the intro screen
@@ -47,21 +64,51 @@ function setup() {
     // Resume interactive cursor trace
     started = true;
     startTime = millis(); // REQUIRED: Resets timer so chaosStartMs delay begins exactly now and scales linearly from 0
+    warningSign.style.display = 'block'; // Show warning on the second screen
+    
+    // Hide the warning automatically after 1 second
+    setTimeout(() => {
+      warningSign.style.display = 'none';
+    }, 1000);
   });
   
   // Set up the Exit Button logic
-  exitButton.addEventListener('click', function() {
+  function triggerOutro() {
     started = false;
+    exited = true; // Enter the trapped state
     // noLoop(); // Halt p5 sketch
     exitButton.style.display = 'none';
+    warningSign.style.display = 'none'; // Hide warning
+    for (let btn of extraExitBtns) btn.style.display = 'none';
     background(0); // clear the screen of trails
     
-    // Bring the intro screen back
-    introScreen.style.display = 'flex';
+    // Bring the outro screen up
+    outroScreen.style.display = 'flex';
     setTimeout(() => {
-      introScreen.style.opacity = '1';
+      outroScreen.style.opacity = '1';
     }, 50);
-  });
+  }
+  
+  exitButton.addEventListener('click', triggerOutro);
+  
+  // Create 20 extra get out buttons
+  for (let i = 0; i < 20; i++) {
+    let btn = document.createElement('button');
+    btn.className = 'extra-exit-btn';
+    btn.innerText = 'Get out';
+    
+    // Assign a chaos threshold roughly between 0.71 and 0.99
+    let threshold = 0.7 + ((i + 1) * 0.0145);
+    btn.dataset.threshold = threshold;
+    
+    // Random positions avoiding exact edge clipping
+    btn.style.left = random(10, 90) + 'vw';
+    btn.style.top = random(10, 90) + 'vh';
+    
+    btn.addEventListener('click', triggerOutro);
+    document.body.appendChild(btn);
+    extraExitBtns.push(btn);
+  }
 }
 
 function draw() {
@@ -74,9 +121,13 @@ function draw() {
     // Draw completed segments
     for (let s of visualSegments) {
       let col;
-      if (s.accentType === 1) col = globalAccentColor;
-      else if (s.accentType === 2) col = globalDarkAccentColor;
-      else col = s.baseColor;
+      if (exited) {
+        col = (s.weight > 2.5) ? color(255, 0, 0) : color(150, 0, 0); // Force to red
+      } else {
+        if (s.accentType === 1) col = globalAccentColor;
+        else if (s.accentType === 2) col = globalDarkAccentColor;
+        else col = s.baseColor;
+      }
       
       linesLayer.stroke(col);
       linesLayer.strokeWeight(s.weight);
@@ -86,9 +137,13 @@ function draw() {
     // Draw nodes
     for (let n of visualNodes) {
       let col;
-      if (n.accentType === 1) col = globalAccentColor;
-      else if (n.accentType === 2) col = globalDarkAccentColor;
-      else col = n.baseColor;
+      if (exited) {
+        col = n.filled ? color(255, 0, 0) : color(150, 0, 0); // Force to red
+      } else {
+        if (n.accentType === 1) col = globalAccentColor;
+        else if (n.accentType === 2) col = globalDarkAccentColor;
+        else col = n.baseColor;
+      }
       
       linesLayer.stroke(col);
       linesLayer.strokeWeight(1.5);
@@ -138,8 +193,17 @@ function draw() {
       document.getElementById('exit-btn').style.display = 'none';
     }
     
+    // Show extra buttons as chaos increases above 0.7
+    for (let btn of extraExitBtns) {
+      if (chaos >= parseFloat(btn.dataset.threshold)) {
+        btn.style.display = 'block';
+      } else {
+        btn.style.display = 'none';
+      }
+    }
+    
     // Define global accent color based on chaos threshold
-    if (chaos < 0.5) {
+    if (chaos < 0.35) {
       globalAccentColor = color(0, 255, 0); // Green phase
       globalDarkAccentColor = color(0, 100, 0); // Dark green
     } else {
@@ -173,7 +237,7 @@ function draw() {
   // Loop through our list and draw each line slightly lower than the last
   for (let i = 0; i < terminalLogs.length; i++) {
     if (!started) {
-      fill(0, 200); // Black before start
+      fill(0, 200); // Black before start or when trapped
     } else if (terminalLogs[i].includes('ERROR_FATAL')) {
       fill(255, 0, 0, 200); // Red for error
     } else {
@@ -294,9 +358,13 @@ class Walker {
       
       // Draw the actively growing line directly to linesLayer
       let col;
-      if (this.accentType === 1) col = globalAccentColor;
-      else if (this.accentType === 2) col = globalDarkAccentColor;
-      else col = this.baseColor;
+      if (exited) {
+        col = (this.weight > 2.5) ? color(255, 0, 0) : color(150, 0, 0); // Force to red
+      } else {
+        if (this.accentType === 1) col = globalAccentColor;
+        else if (this.accentType === 2) col = globalDarkAccentColor;
+        else col = this.baseColor;
+      }
       
       linesLayer.stroke(col);
       linesLayer.strokeWeight(this.weight);
@@ -339,7 +407,7 @@ class Walker {
     // Lengths are purely random and not affected by chaos
     let segLength;
     if (dir === "UP") {
-      segLength = random(50, 150); // Sustains upward stream structure
+      segLength = random(50, 130); // Sustains upward stream structure
     } else {
       segLength = random(30, 40);  // Quick horizontal cornering
     }
@@ -368,7 +436,7 @@ class Walker {
     let accentChance = 0;
     if (chaos < 0.35) {
       accentChance = map(chaos, 0, 0.25, 50, 0); // Green decreasing
-    } else if (chaos > 0.65) {
+    } else if (chaos > 0.35) {
       accentChance = map(chaos, 0.35, 1, 0, 90); // Red capped at exactly 90% max
     }
     
