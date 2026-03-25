@@ -1,3 +1,8 @@
+let screamSound;
+let getOutSound;
+let screamTimer = 0;
+let getOutTimer = 0;
+
 let started = false;
 let exited = false; // State variable for the trapped ending
 let terminalLogs = []; // Array to store the terminal logs
@@ -20,6 +25,8 @@ let visualSegments = [];
 let visualNodes = [];
 
 function setup() {
+  screamSound = new Audio('assets/scream.mp3');
+  getOutSound = new Audio('assets/get_out.mp3');
   createCanvas(windowWidth, windowHeight);
   background(0);
   
@@ -56,6 +63,10 @@ function setup() {
   outroScreen.prepend(outroBgText);
   
   enterButton.addEventListener('click', function() {
+    // strict browser auto-play bypass:
+    screamSound.play().then(() => screamSound.pause()).catch(() => {});
+    getOutSound.play().then(() => getOutSound.pause()).catch(() => {});
+    
     // Fade out the intro screen
     introScreen.style.opacity = '0';
     setTimeout(() => {
@@ -230,12 +241,38 @@ function draw() {
   
   // Add a new log every 4 frames (so it doesn't move too fast to read)
   if (frameCount % 15 === 0) {
-    terminalLogs.push(generateFakeLog()); // Add new line to the end
+    let newLog = generateFakeLog();
+    terminalLogs.push(newLog); // Add new line to the end
+    
+    if (newLog.includes('ORGANIC LIFEFORM')) {
+      getOutTimer = millis() + 500;
+      if (getOutSound.paused) {
+        getOutSound.loop = true;
+        getOutSound.play().catch(() => {});
+      }
+    } else if (newLog.includes('ERROR_FATAL')) {
+      screamTimer = millis() + 500;
+      if (screamSound.paused) {
+        screamSound.loop = true;
+        screamSound.play().catch(() => {});
+      }
+    }
     
     // If we have more lines than fit on screen, remove the oldest one (the first one)
     if (terminalLogs.length > maxLogs) {
       terminalLogs.shift(); 
     }
+  }
+
+  // Stop the scream if timer has elapsed
+  if (screamSound && !screamSound.paused && millis() > screamTimer) {
+    screamSound.pause();
+    screamSound.currentTime = 0;
+  }
+  
+  if (getOutSound && !getOutSound.paused && millis() > getOutTimer) {
+    getOutSound.pause();
+    getOutSound.currentTime = 0;
   }
 
   // Draw the text
